@@ -40,7 +40,7 @@ new g_iWinnerLastRnd;
 new g_iConfig_mp_maxmoney;
 int g_iInPotTotal;
 
-new Handle:g_hSmBet = INVALID_HANDLE;
+new Handle:g_hSmBetEnable = INVALID_HANDLE;
 new Handle:g_hSmBetDeadOnly = INVALID_HANDLE;
 new Handle:g_hSmBetOneVsMany = INVALID_HANDLE;
 new Handle:g_hSmBetAnnounce = INVALID_HANDLE;
@@ -66,18 +66,19 @@ public OnPluginStart()
 
     CreateConVar("sm_teambets_version", PLUGIN_VERSION, "TeamBets Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
     
-    RegConsoleCmd("say", Command_Say);
-    RegConsoleCmd("say_team", Command_Say);
+    //RegConsoleCmd("say", Command_Say);
+    //RegConsoleCmd("say_team", Command_Say);
+    RegConsoleCmd("bet", Command_Bet);
     RegConsoleCmd("pot", Command_Pot);
     
-    g_hSmBet = CreateConVar("sm_bet", "1", "Enable team betting? (0 off, 1 on, def. 1)");    
+    g_hSmBetEnable = CreateConVar("sm_bet_enable", "1", "Enable team betting? (0 off, 1 on, def. 1)");    
     g_hSmBetDeadOnly = CreateConVar("sm_bet_deadonly", "1", "Only dead players can bet. (0 off, 1 on, def. 1)");    
     g_hSmBetOneVsMany = CreateConVar("sm_bet_onevsmany", "0", "The winner of a 1 vs X fight gets the losing pot (def. 0)");    
     g_hSmBetAnnounce = CreateConVar("sm_bet_announce", "0", "Announce 1 vs 1 situations (0 off, 1 on, def. 0)");
     g_hSmBetAdvert = CreateConVar("sm_bet_advert", "1", "Advertise plugin instructions on client connect? (0 off, 1 on, def. 1)");
     g_hSmBetPlanted = CreateConVar("sm_bet_planted", "0", "Prevent betting if the bomb has been planted. (0 off, 1 on, def. 0)");
     
-    HookConVarChange(g_hSmBet, ConVarChange_SmBet);
+    HookConVarChange(g_hSmBetEnable, ConVarChange_SmBetEnable);
 
     g_bEnabled = true;
     
@@ -101,7 +102,7 @@ public Action:Timer_DelayedHooks(Handle:timer)
     }
 }
 
-public ConVarChange_SmBet(Handle:convar, const String:oldValue[], const String:newValue[])
+public ConVarChange_SmBetEnable(Handle:convar, const String:oldValue[], const String:newValue[])
 {
     new iNewVal = StringToInt(newValue);
     
@@ -155,7 +156,7 @@ public Event_Defused(Handle:event, const String:name[], bool:dontBroadcast)
 }
         
 
-public Action:Command_Say(client, args)
+public Action Command_Bet(client, args)
 {
     if (!g_bEnabled)
         return Plugin_Continue;
@@ -178,7 +179,7 @@ public Action:Command_Say(client, args)
     new String:szParts[3][16];
       ExplodeString(szText[startarg], " ", szParts, 3, 16);
 
-     if (strcmp(szParts[0],"!bet",false) == 0)
+     if (strcmp(szParts[0],"bet",false) == 0)
     {
         if (g_bBombPlanted == true || g_bBombDefused == true)
         {
