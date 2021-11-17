@@ -1,0 +1,5 @@
+"In Pot Total"
+  {
+    "#format"        "{1:d}"
+    "en"            "There are ${1} in the pot."
+  }
