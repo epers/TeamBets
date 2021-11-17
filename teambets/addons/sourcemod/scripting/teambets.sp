@@ -178,7 +178,7 @@ public Action:Command_Say(client, args)
     new String:szParts[3][16];
       ExplodeString(szText[startarg], " ", szParts, 3, 16);
 
-     if (strcmp(szParts[0],"bet",false) == 0)
+     if (strcmp(szParts[0],"!bet",false) == 0)
     {
         if (g_bBombPlanted == true || g_bBombDefused == true)
         {
