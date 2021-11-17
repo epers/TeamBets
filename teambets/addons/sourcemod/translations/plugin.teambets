@@ -77,7 +77,7 @@
 	
 	"Advertise Bets"
 	{
-		"en"			"Type 'bet team amount' to bet on the winning team!"
+		"en"			"Type '!bet [team] [amount]' to bet on the winning team!"
 	}
 
 	"In Pot Total"

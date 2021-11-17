@@ -164,142 +164,120 @@ public Action Command_Bet(client, args)
     new String:szText[192];
     GetCmdArgString(szText, sizeof(szText));
     
-    new startarg = 0;
-    if (szText[0] == '"')
-    {
-        startarg = 1;
-        /* Strip the ending quote, if there is one */
-        new szTextlen = strlen(szText);
-        if (szText[szTextlen-1] == '"')
-        {
-            szText[szTextlen-1] = '\0';
-        }
-    }
+    //new startarg = 0;
     
     new String:szParts[3][16];
-      ExplodeString(szText[startarg], " ", szParts, 3, 16);
+    // ExplodeString(szText[startarg], " ", szParts, 3, 16);
+    ExplodeString(szText, " ", szParts, 3, 16);
 
-     if (strcmp(szParts[0],"bet",false) == 0)
+
+    if (g_bBombPlanted == true || g_bBombDefused == true)
     {
-        if (g_bBombPlanted == true || g_bBombDefused == true)
-        {
-            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "No bets after bomb planted");
-            return Plugin_Handled;
-        }
-    
+        PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "No bets after bomb planted");
+        return Plugin_Handled;
+    }
         if (GetClientTeam(client) <= 1)
+    {
+        PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Must Be On A Team To Vote");
+        return Plugin_Handled;
+    }
+    
+    if (g_bPlayerBet[client])
+    {
+        PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Already Betted");
+        return Plugin_Handled;    
+    }
+
+    if (GetConVarInt(g_hSmBetDeadOnly) == 1 && IsAlive(client))
+    {
+        PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Must Be Dead To Vote");
+        return Plugin_Handled;
+    }
+        if (strcmp(szParts[0],"ct",false) != 0 && strcmp(szParts[0],"t", false) != 0)
+    {
+        PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Invalid Team for Bet");
+        return Plugin_Handled;
+    }
+
+    if (strcmp(szParts[0],"ct",false) == 0 || strcmp(szParts[0],"t", false) == 0)
+    {
+        new iAmount = 0;
+        new iBank = GetMoney(client);
+        if (IsCharNumeric(szParts[1][0]))
         {
-            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Must Be On A Team To Vote");
-            return Plugin_Handled;
+            iAmount = StringToInt(szParts[1]);
         }
-        
-        if (g_bPlayerBet[client])
+        else if (strcmp(szParts[1],"all",false) == 0)
         {
-            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Already Betted");
-            return Plugin_Handled;    
+            iAmount = iBank;
+        }
+        if (strcmp(szParts[1],"half", false) == 0)
+        {
+            iAmount = (iBank / 2) + 1;
+        }
+        if (strcmp(szParts[1],"third", false) == 0)
+        {
+            iAmount = (iBank / 3) + 1;
         }
 
-        if (GetConVarInt(g_hSmBetDeadOnly) == 1 && IsAlive(client))
+        if (iAmount < 1)
         {
-            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Must Be Dead To Vote");
+            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Invalid Bet Amount");
             return Plugin_Handled;
-        }
-    
-        if (strcmp(szParts[1],"ct",false) != 0 && strcmp(szParts[1],"t", false) != 0)
-        {
-            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Invalid Team for Bet");
-            return Plugin_Handled;
-        }
-
-        if (strcmp(szParts[1],"ct",false) == 0 || strcmp(szParts[1],"t", false) == 0)
-        {
-    
-            new iAmount = 0;
-            new iBank = GetMoney(client);
-    
-            if (IsCharNumeric(szParts[2][0]))
-            {
-                iAmount = StringToInt(szParts[2]);
-            }
-            else if (strcmp(szParts[2],"all",false) == 0)
-            {
-                iAmount = iBank;
-            }
-            if (strcmp(szParts[2],"half", false) == 0)
-            {
-                iAmount = (iBank / 2) + 1;
-            }
-            if (strcmp(szParts[2],"third", false) == 0)
-            {
-                iAmount = (iBank / 3) + 1;
-            }
-
-            if (iAmount < 1)
-            {
-                PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Invalid Bet Amount");
-                return Plugin_Handled;
-            }        
-    
+        }        
             if (iAmount > iBank || iBank < 1)
-            {
-                PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Not Enough Money");
-                return Plugin_Handled;
-            }
-    
-            new iOdds[2] = {0, 0}, iTeam;
-            new iMaxClients = GetMaxClients();
+        {
+            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Not Enough Money");
+            return Plugin_Handled;
+        }
+        new iOdds[2] = {0, 0}, iTeam;
+        new iMaxClients = GetMaxClients();
 
-            for (new i = 1; i <= iMaxClients; i++)
+        for (new i = 1; i <= iMaxClients; i++)
+        {
+            if (IsClientInGame(i) && IsAlive(i))
             {
-                if (IsClientInGame(i) && IsAlive(i))
+                iTeam = GetClientTeam(i);
+                if (iTeam == 2) // 2 = t, 3 = ct
                 {
-                    iTeam = GetClientTeam(i);
-                    if (iTeam == 2) // 2 = t, 3 = ct
-                    {
-                        iOdds[0]++;
-                    }
-                    else if (iTeam == 3)
-                    {
-                        iOdds[1]++;            
-                    }
+                    iOdds[0]++;
+                }
+                else if (iTeam == 3)
+                {
+                    iOdds[1]++;            
                 }
             }
-    
-            if (iOdds[0] < 1 || iOdds[1] < 1)
-            {
-                PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Players Are Dead");
-                return Plugin_Continue;        
-            }
-    
-            g_iPlayerBetData[client][BET_AMOUNT] = iAmount;
-            g_iPlayerBetData[client][BET_TEAM] = (strcmp(szParts[1],"t",false) == 0 ? 2 : 3); // 2 = t, 3 = ct
-            g_iInPotTotal += iAmount;
-    
-            new iWin;
-    
-            if (g_iPlayerBetData[client][BET_TEAM] == 2) // 2 = t, 3 = ct
-            {
-                iWin = RoundToNearest((float(iOdds[1]) / float(iOdds[0])) * float(iAmount));
-                PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Bet Made", iOdds[1], iOdds[0], iWin, g_iPlayerBetData[client][BET_AMOUNT]);        
-            }
-            else
-            {
-                iWin = RoundToNearest((float(iOdds[0]) / float(iOdds[1])) * float(iAmount));
-                PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Bet Made", iOdds[0], iOdds[1], iWin, g_iPlayerBetData[client][BET_AMOUNT]);
-            }
-
-            g_iPlayerBetData[client][BET_WIN] = iWin;
-            g_bPlayerBet[client] = true;
-    
-            if (g_bOneVsMany && g_iOneVsManyTeam != g_iPlayerBetData[client][BET_TEAM])
-            { 
-                g_iOneVsManyPot += iAmount;
-            }
-
-            SetMoney(client, iBank - iAmount);
-
-            return Plugin_Handled;
         }
+        if (iOdds[0] < 1 || iOdds[1] < 1)
+        {
+            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Players Are Dead");
+            return Plugin_Continue;        
+        }
+         g_iPlayerBetData[client][BET_AMOUNT] = iAmount;
+        g_iPlayerBetData[client][BET_TEAM] = (strcmp(szParts[1],"t",false) == 0 ? 2 : 3); // 2 = t, 3 = ct
+        g_iInPotTotal += iAmount;
+        new iWin;
+        if (g_iPlayerBetData[client][BET_TEAM] == 2) // 2 = t, 3 = ct
+        {
+            iWin = RoundToNearest((float(iOdds[1]) / float(iOdds[0])) * float(iAmount));
+            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Bet Made", iOdds[1], iOdds[0], iWin, g_iPlayerBetData[client][BET_AMOUNT]);        
+        }
+        else
+        {
+            iWin = RoundToNearest((float(iOdds[0]) / float(iOdds[1])) * float(iAmount));
+            PrintToChat(client, "\x04-\x04[TeamBets]\x01 %t", "Bet Made", iOdds[0], iOdds[1], iWin, g_iPlayerBetData[client][BET_AMOUNT]);
+        }
+
+        g_iPlayerBetData[client][BET_WIN] = iWin;
+        g_bPlayerBet[client] = true;
+        if (g_bOneVsMany && g_iOneVsManyTeam != g_iPlayerBetData[client][BET_TEAM])
+        { 
+            g_iOneVsManyPot += iAmount;
+        }
+
+        SetMoney(client, iBank - iAmount);
+
+        return Plugin_Handled;
     }
     
     return Plugin_Continue;
